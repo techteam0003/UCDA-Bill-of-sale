@@ -1,6 +1,6 @@
 # UCDA Wholesale Bill of Sale
 
-A React web app that generates UCDA Wholesale Bill of Sale PDFs. Seller details are pre-filled from the seller you pick in the dropdown (16496351 Canada Inc. or ASYED AUTO SALES LTD). Users fill in purchaser info, vehicle details, pricing, and disclosures through a clean multi-step form, then generate a properly filled PDF for preview and download.
+A React web app that generates UCDA Wholesale Bill of Sale PDFs. Seller details come from saved seller profiles. Users fill in purchaser info, vehicle details, pricing, and disclosures through a clean multi-step form, then generate a properly filled PDF for preview and download.
 
 ## How It Works
 
@@ -25,7 +25,7 @@ npm run dev
 public/
   UCDA_blank_template.pdf    ← Blank UCDA template with 74 fillable fields
 src/
-  config/sellerDefaults.js   ← Built-in seller data (16496351 Canada Inc., ASYED AUTO SALES LTD)
+  config/sellerDefaults.js   ← Built-in seller profiles
   services/pdfGenerator.js   ← Core PDF filling logic (pdf-lib)
   components/BillForm.jsx    ← Multi-step form UI
   App.jsx                    ← Main app layout
@@ -34,7 +34,7 @@ src/
 
 ## Key Features
 
-- **Seller selection**: choose 16496351 Canada Inc. or ASYED AUTO SALES LTD; the chosen seller is filled into the bill
+- **Seller profiles**: pick a seller; their details and signature are filled on every bill
 - **5-step form**: Purchaser → Vehicle → Pricing → Disclosures → Searches
 - **Auto-calculated**: HST (13%) and Total computed in real-time
 - **VIN year detection**: Auto-detects model year from VIN's 10th character
@@ -63,7 +63,7 @@ firebase deploy
 
 The seller banner at the top of the form now has a dropdown plus **Edit**, **+ Add Seller** and **Delete** buttons.
 
-- 16496351 Canada Inc. (default) and ASYED AUTO SALES LTD are built in (they can be edited but not deleted).
+- Built-in sellers: 16496351 Canada Inc. (default) and ASYED AUTO SALES LTD, with signatures in `public/signatures/`. They can be edited but not deleted.
 - Each seller can have its own signature image (PNG/JPG, under 500 KB). Sellers without a signature get an unsigned PDF.
 - Sellers are saved in the browser's localStorage, so they persist on that computer/browser only.
 

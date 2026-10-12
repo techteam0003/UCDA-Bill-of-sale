@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import BillForm from "./components/BillForm";
-import { DEFAULT_SELLER_ID, isBuiltinSeller } from "./config/sellerDefaults";
+import { DEFAULT_SELLER, isBuiltinSeller } from "./config/sellerDefaults";
 import {
   loadSellers,
   saveSellers,
@@ -36,7 +36,7 @@ function App() {
       saveSellers(next);
       return next;
     });
-    setSelectedId(DEFAULT_SELLER_ID);
+    setSelectedId(DEFAULT_SELLER.id);
   };
 
   return (

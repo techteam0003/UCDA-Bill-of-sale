@@ -1,27 +1,32 @@
-import { PDFDocument } from "pdf-lib";
-import { BUILTIN_SELLERS } from "../config/sellerDefaults";
-// The blank template is bundled into the app as a data URL (?inline), so generating
-// a PDF never makes a network request. A runtime fetch of a .pdf file can be blocked
-// by download managers (e.g. IDM) or browser extensions, which shows "Failed to fetch".
-import TEMPLATE_DATA_URL from "../assets/UCDA_blank_template.pdf?inline";
+import { PDFDocument, rgb } from "pdf-lib";
+import { DEFAULT_SELLER } from "../config/sellerDefaults";
 
-function templateBytes() {
-  const b64 = TEMPLATE_DATA_URL.slice(TEMPLATE_DATA_URL.indexOf(",") + 1);
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-}
-
-
-export async function generateBillOfSale(formData, seller = BUILTIN_SELLERS[0]) {
+export async function generateBillOfSale(formData, seller = DEFAULT_SELLER) {
   // 1. Load blank template
-  const pdfDoc = await PDFDocument.load(templateBytes());
+  const templateBytes = await fetch("/UCDA_blank_template.pdf").then((res) =>
+    res.arrayBuffer()
+  );
+  const pdfDoc = await PDFDocument.load(templateBytes);
 
   // 2. Get the form
   const form = pdfDoc.getForm();
 
   // Helper: safely set text field
+  // Explicit font sizes (pt) for the vehicle / dealer / pricing block.
+  // Without these, the template auto-sizes text to fill the tall boxes, so it prints huge.
+  const FONT_SIZES = {
+    STOCK: 9, YEAR: 9, MAKE: 9, MODEL: 9, COLOUR: 9, "TRIM LEVEL": 9, FUEL: 9,
+    "SERIAL OR VIN": 11,
+    ODOM: 9,
+    PRICE: 10, HST: 10, LIC: 10, TOTAL: 10,
+    "Salespersons Registration": 9, "Salespersons Name": 9, "HST Registration": 9,
+    "Salespersons Registration_2": 9, "Salespersons Name_2": 9, "HST Registration_2": 9,
+  };
+
   const setText = (fieldId, value) => {
     try {
       const field = form.getTextField(fieldId);
+      if (FONT_SIZES[fieldId]) field.setFontSize(FONT_SIZES[fieldId]);
       field.setText(String(value || ""));
     } catch (e) {
       console.warn(`Field "${fieldId}" not found:`, e.message);
@@ -77,8 +82,10 @@ export async function generateBillOfSale(formData, seller = BUILTIN_SELLERS[0]) 
   // ========== VEHICLE ==========
   setText("STOCK", formData.stockNumber);
   setText("YEAR", formData.year);
-  setText("MAKE", formData.make);
-  setText("MODEL", formData.model);
+  // Leading spaces = left padding so text doesn't touch the cell border line
+  const pad = (v) => (v ? `  ${v}` : "");
+  setText("MAKE", pad(formData.make));
+  setText("MODEL", pad(formData.model));
   setText("COLOUR", formData.colour);
   setText("TRIM LEVEL", formData.trimLevel);
   setText("FUEL", formData.fuelType);
@@ -87,9 +94,11 @@ export async function generateBillOfSale(formData, seller = BUILTIN_SELLERS[0]) 
 
   // ========== PRICING ==========
   setText("PRICE", `$${Number(formData.price || 0).toFixed(2)}`);
-  setText("HST", `$${Number(formData.hst || 0).toFixed(2)}`);
-  setText("LIC", formData.deposit ? `$${Number(formData.deposit).toFixed(2)}` : "$");
-  setText("TOTAL", `$${Number(formData.total || 0).toFixed(2)}`);
+  // HST / Deposit / Total: the template's small printed "$" is covered later (after flatten)
+  // and we print our own "$" so it lines up with the amount, same as PRICE.
+  setText("HST", ` $${Number(formData.hst || 0).toFixed(2)}`);
+  setText("LIC", formData.deposit ? ` $${Number(formData.deposit).toFixed(2)}` : " $");
+  setText("TOTAL", ` $${Number(formData.total || 0).toFixed(2)}`);
 
   // ========== RADIO GROUPS ==========
   setRadio(
@@ -180,32 +189,69 @@ export async function generateBillOfSale(formData, seller = BUILTIN_SELLERS[0]) 
   setText("DISC_4", formData.detailsLine3);
 
   // ========== FLATTEN FORM ==========
+  // Remember where the HST / Deposit / Total boxes are before flattening
+  const dollarBoxes = ["HST", "LIC", "TOTAL"]
+    .map((id) => {
+      try {
+        return form.getTextField(id).acroField.getWidgets()[0].getRectangle();
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+
   form.flatten();
+
+  // Cover the template's misaligned printed "$" in those boxes with white
+  {
+    const page = pdfDoc.getPages()[0];
+    for (const r of dollarBoxes) {
+      page.drawRectangle({
+        x: r.x - 7,
+        y: r.y + 1,
+        width: 9,
+        height: r.height - 2,
+        color: rgb(1, 1, 1),
+      });
+    }
+  }
 
   // ========== DRAW SELLER SIGNATURE IMAGE ==========
   // The signature field (/Sig type) can't be filled via form API,
   // so we draw it as an image directly on the page after flattening.
-  if (seller.signature && seller.signature.startsWith("data:image/")) {
+  if (seller.signature) {
     try {
-      // Uploaded signature stored as a data URL (PNG or JPEG)
-      const [meta, b64] = seller.signature.split(",");
-      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      const sigImage = meta.includes("image/png")
-        ? await pdfDoc.embedPng(bytes)
-        : await pdfDoc.embedJpg(bytes);
+      let sigImage;
+      if (seller.signature.startsWith("data:")) {
+        // Uploaded signature stored as a data URL (PNG or JPEG)
+        const [meta, b64] = seller.signature.split(",");
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        sigImage = meta.includes("image/png")
+          ? await pdfDoc.embedPng(bytes)
+          : await pdfDoc.embedJpg(bytes);
+      } else {
+        // Built-in signature file from /public/signatures
+        const bytes = await fetch(seller.signature).then((r) => {
+          if (!r.ok) throw new Error(`Signature not found: ${seller.signature}`);
+          return r.arrayBuffer();
+        });
+        sigImage = /\.jpe?g$/i.test(seller.signature)
+          ? await pdfDoc.embedJpg(bytes)
+          : await pdfDoc.embedPng(bytes);
+      }
 
       const page = pdfDoc.getPages()[0];
 
       // Signature field rect: [18, 453.48, 216.12, 470.16]
       // Fit the image into the signature box above the "Signature" line
-      const maxW = 135;
+      const maxW = 150;
       const maxH = 30;
       const scale = Math.min(maxW / sigImage.width, maxH / sigImage.height);
       const sigWidth = sigImage.width * scale;
       const sigHeight = sigImage.height * scale;
       page.drawImage(sigImage, {
-        x: 45,
-        y: 458,
+        x: 85,
+        y: 455,
         width: sigWidth,
         height: sigHeight,
       });

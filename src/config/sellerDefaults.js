@@ -1,8 +1,8 @@
-// Built-in sellers — always available in the seller dropdown, cannot be deleted.
-// The first one is selected by default.
+// Built-in sellers — available on every device.
+// signature: path to a PNG in /public, or a data: URL (uploaded via Edit), or "" for none.
 export const BUILTIN_SELLERS = [
   {
-    id: "16496351-canada-inc",
+    id: "seller-16496351-canada",
     mvdaRegNumber: "5873807",
     name: "16496351 Canada Inc.",
     address: "3725 Lake Shore Blvd W",
@@ -12,24 +12,24 @@ export const BUILTIN_SELLERS = [
     salespersonRegistration: "5770995",
     salespersonName: "DEEPIT SAJAN OOMMEN",
     hstRegistration: "700404957RT0001",
-    signature: "",
+    signature: "/signatures/deepit-sajan-oommen.png",
   },
   {
-    id: "asyed-auto-sales",
+    id: "seller-asyed-auto-sales",
     mvdaRegNumber: "5866991",
     name: "ASYED AUTO SALES LTD",
-    address: "109–2829 DERRY RD E",
+    address: "109-2829 DERRY RD E",
     cityProvPC: "Mississauga, Ontario, L4T 1A5",
     telephone: "647-762-6291",
     fax: "",
     salespersonRegistration: "5920756",
     salespersonName: "RAJDEVINDER SINGH VAROWAL",
     hstRegistration: "752404822RT0001",
-    signature: "",
+    signature: "/signatures/rajdevinder-singh-varowal.png",
   },
 ];
 
-export const DEFAULT_SELLER_ID = BUILTIN_SELLERS[0].id;
+export const DEFAULT_SELLER = BUILTIN_SELLERS[0];
 
 export const isBuiltinSeller = (id) => BUILTIN_SELLERS.some((s) => s.id === id);
 
@@ -44,7 +44,7 @@ export const EMPTY_SELLER = {
   salespersonRegistration: "",
   salespersonName: "",
   hstRegistration: "",
-  signature: "", // "" = none, or a data:image/png|jpeg URL
+  signature: "",
 };
 
 export const HST_RATE = 0.13;

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { EMPTY_SELLER, isBuiltinSeller } from "../config/sellerDefaults";
+import { EMPTY_SELLER, BUILTIN_SELLERS, isBuiltinSeller } from "../config/sellerDefaults";
 import { newSellerId } from "../services/sellerStore";
 
 const FIELDS = [
   ["name", "Company Name", true, "full"],
-  ["mvdaRegNumber", "MVDA Reg #", true],
-  ["telephone", "Telephone", true],
+  ["mvdaRegNumber", "MVDA Reg #", false],
+  ["telephone", "Telephone", false],
   ["address", "Address", true, "full"],
   ["cityProvPC", "City / Province / Postal Code", true],
   ["fax", "Fax", false],
@@ -48,6 +48,8 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
     onSave({ ...draft, id: draft.id || newSellerId() });
   };
 
+  const originalSignature = BUILTIN_SELLERS.find((b) => b.id === draft.id)?.signature || "";
+
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -77,7 +79,7 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
               <label className="field-label">Seller Signature (optional)</label>
               <div className="sig-row">
                 <div className="sig-preview">
-                  {draft.signature?.startsWith("data:image/") ? (
+                  {draft.signature ? (
                     <img src={draft.signature} alt="Signature" />
                   ) : (
                     <span className="field-hint">No signature — the PDF will be left unsigned</span>
@@ -93,6 +95,14 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
                       hidden
                     />
                   </label>
+                  {originalSignature && draft.signature !== originalSignature && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setDraft((d) => ({ ...d, signature: originalSignature }))}
+                    >
+                      Use original
+                    </button>
+                  )}
                   {draft.signature && (
                     <button
                       className="btn btn-secondary btn-sm"
@@ -203,7 +213,7 @@ export default function SellerPanel({ sellers, selectedId, onSelect, onSave, onD
         </div>
         <div>
           <span className="seller-label">Signature</span>
-          <span className="seller-value">{seller.signature?.startsWith("data:image/") ? "✓ On file" : "None"}</span>
+          <span className="seller-value">{seller.signature ? "✓ On file" : "None"}</span>
         </div>
       </div>
 

@@ -307,7 +307,7 @@ export default function BillForm({
             </div>
             <div className="field-row">
               <label className="field-label">
-                Telephone <span className="req">*</span>
+                Telephone
               </label>
               <input
                 className="field-input"

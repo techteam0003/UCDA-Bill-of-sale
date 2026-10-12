@@ -1,48 +1,64 @@
-import { BUILTIN_SELLERS, DEFAULT_SELLER_ID, isBuiltinSeller } from "../config/sellerDefaults";
+import { DEFAULT_SELLER, BUILTIN_SELLERS } from "../config/sellerDefaults";
 
-// Sellers are saved in this browser's localStorage so they survive reloads.
-// v2 keys: data saved by older versions of the app is discarded.
-const SELLERS_KEY = "ucda.sellers.v2";
-const SELECTED_KEY = "ucda.selectedSellerId.v2";
-const LEGACY_KEYS = ["ucda.sellers.v1", "ucda.selectedSellerId.v1"];
+// Custom sellers / edits are saved in this browser's localStorage.
+const SELLERS_KEY = "ucda.sellers.v1";
+const SELECTED_KEY = "ucda.selectedSellerId.v1";
 
-try {
-  LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
-} catch {
-  /* ignore */
-}
+// Old data from previous versions that should no longer appear
+const REMOVED_IDS = new Set(["dreamfleet-default"]);
+const REMOVED_NAMES = new Set(["dreamfleet inc.", "dreamfleet inc", "dreamfleet"]);
+
+const norm = (v) => String(v || "").trim().toLowerCase();
+
+// Keep only signature values this version understands
+const validSignature = (sig) =>
+  typeof sig === "string" && (sig.startsWith("data:image/") || sig.startsWith("/signatures/"))
+    ? sig
+    : "";
 
 export function loadSellers() {
+  let saved = [];
   try {
     const raw = localStorage.getItem(SELLERS_KEY);
-    const saved = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(saved)) return [...BUILTIN_SELLERS];
-    // Built-in sellers always come first; a saved edit of one overrides its config.
-    const builtins = BUILTIN_SELLERS.map((b) => {
-      const edit = saved.find((s) => s.id === b.id);
-      return edit ? { ...b, ...edit } : b;
-    });
-    const others = saved.filter((s) => !isBuiltinSeller(s.id));
-    return [...builtins, ...others];
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) saved = parsed;
   } catch {
-    return [...BUILTIN_SELLERS];
+    /* ignore */
   }
+
+  saved = saved
+    .filter((s) => s && !REMOVED_IDS.has(s.id) && !REMOVED_NAMES.has(norm(s.name)))
+    .map((s) => ({ ...s, signature: validSignature(s.signature) }));
+
+  // Built-in sellers first; a saved edit of one overrides the code version.
+  const builtins = BUILTIN_SELLERS.map((b) => {
+    const edit = saved.find((s) => s.id === b.id);
+    return edit ? { ...b, ...edit } : b;
+  });
+
+  // Custom sellers — skip any that duplicate a built-in (same company name)
+  const builtinNames = new Set(BUILTIN_SELLERS.map((b) => norm(b.name)));
+  const custom = saved.filter(
+    (s) => !BUILTIN_SELLERS.some((b) => b.id === s.id) && !builtinNames.has(norm(s.name))
+  );
+
+  return [...builtins, ...custom];
 }
 
 export function saveSellers(sellers) {
   try {
     localStorage.setItem(SELLERS_KEY, JSON.stringify(sellers));
   } catch (e) {
-    console.warn("Could not save seller:", e.message);
+    console.warn("Could not save sellers:", e.message);
     alert("Could not save seller (storage full?). Try a smaller signature image.");
   }
 }
 
 export function loadSelectedId() {
   try {
-    return localStorage.getItem(SELECTED_KEY) || DEFAULT_SELLER_ID;
+    return localStorage.getItem(SELECTED_KEY) || DEFAULT_SELLER.id;
   } catch {
-    return DEFAULT_SELLER_ID;
+    return DEFAULT_SELLER.id;
   }
 }
 
