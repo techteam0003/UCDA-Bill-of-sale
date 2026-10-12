@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { EMPTY_SELLER, BUILTIN_SELLERS, isBuiltinSeller } from "../config/sellerDefaults";
-import { newSellerId } from "../services/sellerStore";
+import { EMPTY_SELLER } from "../config/sellerDefaults";
 
 const FIELDS = [
   ["name", "Company Name", true, "full"],
@@ -39,16 +38,25 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
     const missing = FIELDS.filter(([k, , req]) => req && !String(draft[k] || "").trim());
     if (missing.length) {
       setError("Please fill in: " + missing.map(([, l]) => l).join(", "));
       return;
     }
-    onSave({ ...draft, id: draft.id || newSellerId() });
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(draft); // saved to the database
+    } catch (e) {
+      setError(e.message);
+      setSaving(false);
+    }
   };
 
-  const originalSignature = BUILTIN_SELLERS.find((b) => b.id === draft.id)?.signature || "";
+  const originalSignature = initial.signature || "";
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
@@ -125,8 +133,8 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
           <button className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="btn btn-primary" onClick={handleSave}>
-            {isNew ? "Add Seller" : "Save Changes"}
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : isNew ? "Add Seller" : "Save Changes"}
           </button>
         </div>
       </div>
@@ -137,7 +145,7 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
 export default function SellerPanel({ sellers, selectedId, onSelect, onSave, onDelete }) {
   const [modal, setModal] = useState(null); // { seller, isNew }
   const seller = sellers.find((s) => s.id === selectedId) || sellers[0];
-  const isDefault = isBuiltinSeller(seller.id);
+  const canDelete = sellers.length > 1;
 
   const handleDelete = () => {
     if (window.confirm(`Delete seller "${seller.name}"?`)) onDelete(seller.id);
@@ -173,7 +181,7 @@ export default function SellerPanel({ sellers, selectedId, onSelect, onSave, onD
           >
             + Add Seller
           </button>
-          {!isDefault && (
+          {canDelete && (
             <button className="seller-btn seller-btn-danger" onClick={handleDelete}>
               Delete
             </button>
@@ -222,8 +230,8 @@ export default function SellerPanel({ sellers, selectedId, onSelect, onSave, onD
           initial={modal.seller}
           isNew={modal.isNew}
           onClose={() => setModal(null)}
-          onSave={(s) => {
-            onSave(s);
+          onSave={async (s) => {
+            await onSave(s); // throws on error → modal shows it
             setModal(null);
           }}
         />

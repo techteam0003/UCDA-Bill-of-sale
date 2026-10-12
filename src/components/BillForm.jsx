@@ -86,8 +86,15 @@ export default function BillForm({
   onSelectSeller,
   onSaveSeller,
   onDeleteSeller,
+  onSaveBill,
+  initialData,
+  previousPurchasers = [],
 }) {
-  const [form, setForm] = useState(INITIAL_STATE);
+  // initialData = a past bill's form (History → Copy); always use today's date
+  const [form, setForm] = useState(() =>
+    initialData ? { ...INITIAL_STATE, ...initialData, date: today } : INITIAL_STATE
+  );
+  const [saveState, setSaveState] = useState({ state: "idle" }); // idle | saving | saved | error
   const [vinStatus, setVinStatus] = useState({ state: "idle" }); // idle | loading | done | error
   const lastDecodedVin = useRef("");
   const decodeAbort = useRef(null);
@@ -186,6 +193,7 @@ export default function BillForm({
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
       setPdfUrl(url);
       setPdfBlob(blob);
+      setSaveState({ state: "idle" });
     } catch (err) {
       console.error("PDF generation error:", err);
       alert("Error generating PDF: " + err.message);
@@ -193,9 +201,20 @@ export default function BillForm({
     setLoading(false);
   };
 
-  // Download PDF
-  const handleDownload = () => {
+  // Save to history (once per generated PDF), then download
+  const handleDownload = async () => {
     if (!pdfBlob) return;
+    if (saveState.state !== "saved" && onSaveBill) {
+      setSaveState({ state: "saving" });
+      try {
+        await onSaveBill(form, pdfBlob);
+        setSaveState({ state: "saved" });
+      } catch (err) {
+        console.error(err);
+        setSaveState({ state: "error", message: err.message });
+        // still download so the user isn't blocked
+      }
+    }
     const link = document.createElement("a");
     link.href = URL.createObjectURL(pdfBlob);
     const name = form.purchaserName || "Bill";
@@ -222,11 +241,28 @@ export default function BillForm({
             <button className="btn btn-secondary" onClick={handleBack}>
               ← Edit Form
             </button>
-            <button className="btn btn-primary" onClick={handleDownload}>
-              ⬇ Download PDF
+            <button
+              className="btn btn-primary"
+              onClick={handleDownload}
+              disabled={saveState.state === "saving"}
+            >
+              {saveState.state === "saving"
+                ? "Saving…"
+                : saveState.state === "saved"
+                ? "⬇ Download Again"
+                : "⬇ Save & Download PDF"}
             </button>
           </div>
         </div>
+        {saveState.state === "saved" && (
+          <div className="save-banner ok">✓ Saved to History</div>
+        )}
+        {saveState.state === "error" && (
+          <div className="save-banner err">
+            PDF downloaded, but saving to History failed: {saveState.message}. Click the button
+            again to retry.
+          </div>
+        )}
         <iframe
           src={pdfUrl}
           className="pdf-iframe"
@@ -285,6 +321,26 @@ export default function BillForm({
       {activeSection === 0 && (
         <div className="section">
           <h3 className="section-title">Purchaser Information</h3>
+          {previousPurchasers.length > 0 && (
+            <div className="field-row" style={{ marginBottom: 14 }}>
+              <label className="field-label">Previous Purchaser (auto-fill)</label>
+              <select
+                className="field-input"
+                value=""
+                onChange={(e) => {
+                  const p = previousPurchasers[Number(e.target.value)];
+                  if (p) setForm((prev) => ({ ...prev, ...p }));
+                }}
+              >
+                <option value="">— Select to fill purchaser details —</option>
+                {previousPurchasers.map((p, i) => (
+                  <option key={p.purchaserName + i} value={i}>
+                    {p.purchaserName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="field-grid">
             <div className="field-row full">
               <label className="field-label">

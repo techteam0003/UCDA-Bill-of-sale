@@ -1,7 +1,6 @@
 import { PDFDocument, rgb } from "pdf-lib";
-import { DEFAULT_SELLER } from "../config/sellerDefaults";
 
-export async function generateBillOfSale(formData, seller = DEFAULT_SELLER) {
+export async function generateBillOfSale(formData, seller) {
   // 1. Load blank template
   const templateBytes = await fetch("/UCDA_blank_template.pdf").then((res) =>
     res.arrayBuffer()
@@ -230,14 +229,15 @@ export async function generateBillOfSale(formData, seller = DEFAULT_SELLER) {
           ? await pdfDoc.embedPng(bytes)
           : await pdfDoc.embedJpg(bytes);
       } else {
-        // Built-in signature file from /public/signatures
-        const bytes = await fetch(seller.signature).then((r) => {
-          if (!r.ok) throw new Error(`Signature not found: ${seller.signature}`);
-          return r.arrayBuffer();
-        });
-        sigImage = /\.jpe?g$/i.test(seller.signature)
-          ? await pdfDoc.embedJpg(bytes)
-          : await pdfDoc.embedPng(bytes);
+        // Signature file: /public/signatures/... or a Supabase storage link
+        const bytes = new Uint8Array(
+          await fetch(seller.signature).then((r) => {
+            if (!r.ok) throw new Error(`Signature not found (${r.status})`);
+            return r.arrayBuffer();
+          })
+        );
+        const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
+        sigImage = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
       }
 
       const page = pdfDoc.getPages()[0];

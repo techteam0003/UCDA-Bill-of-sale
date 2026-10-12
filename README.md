@@ -25,7 +25,8 @@ npm run dev
 public/
   UCDA_blank_template.pdf    ← Blank UCDA template with 74 fillable fields
 src/
-  config/sellerDefaults.js   ← Built-in seller profiles
+  lib/supabase.js            ← Supabase client
+  services/db.js             ← All database / storage calls
   services/pdfGenerator.js   ← Core PDF filling logic (pdf-lib)
   components/BillForm.jsx    ← Multi-step form UI
   App.jsx                    ← Main app layout
@@ -59,18 +60,17 @@ firebase deploy
 - No other dependencies needed
 
 
-## Seller Profiles
+## Database (Supabase)
 
-The seller banner at the top of the form now has a dropdown plus **Edit**, **+ Add Seller** and **Delete** buttons.
+Sellers, bill history, signature images and saved PDFs live in Supabase.
+Users must sign in. **Setup instructions: see `SUPABASE_SETUP.md`.**
 
-- Built-in sellers: 16496351 Canada Inc. (default) and ASYED AUTO SALES LTD, with signatures in `public/signatures/`. They can be edited but not deleted.
-- Each seller can have its own signature image (PNG/JPG, under 500 KB). Sellers without a signature get an unsigned PDF.
-- Sellers are saved in the browser's localStorage, so they persist on that computer/browser only.
+- **Bill Form** – pick a seller, fill the form, *Generate*, then *Save & Download PDF* (saves to History).
+- **Previous Purchaser** dropdown auto-fills purchaser details from past bills.
+- **History** – search by purchaser / VIN / stock / make / model, filter by seller, view or download PDFs,
+  *Copy* a past bill into a new one, or delete.
 
 ## NHTSA VIN Decoder
 
-When a full 17-character VIN is entered, the app calls the free NHTSA vPIC API
-(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValuesExtended/{VIN}?format=json`)
-and fills in Year, Make, Model, Trim and Fuel Type. Body, engine, drive and plant info are shown for reference.
-Colour is not encoded in a VIN and must be entered manually. If NHTSA can't be reached, the year is still
-derived from the 10th VIN character. Logic lives in `src/services/vinDecoder.js`.
+Entering a full 17-character VIN calls the free NHTSA vPIC API and fills Year, Make, Model, Trim and Fuel Type.
+Colour is not in a VIN and must be entered manually.
