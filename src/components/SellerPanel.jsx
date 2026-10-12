@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { EMPTY_SELLER, SELLER_CONFIG } from "../config/sellerDefaults";
+import { EMPTY_SELLER, isBuiltinSeller } from "../config/sellerDefaults";
 import { newSellerId } from "../services/sellerStore";
 
 const FIELDS = [
@@ -48,8 +48,6 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
     onSave({ ...draft, id: draft.id || newSellerId() });
   };
 
-  const canUseBuiltin = draft.id === SELLER_CONFIG.id;
-
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -79,9 +77,7 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
               <label className="field-label">Seller Signature (optional)</label>
               <div className="sig-row">
                 <div className="sig-preview">
-                  {draft.signature === "builtin" ? (
-                    <img src="/seller_signature.png" alt="Signature" />
-                  ) : draft.signature ? (
+                  {draft.signature?.startsWith("data:image/") ? (
                     <img src={draft.signature} alt="Signature" />
                   ) : (
                     <span className="field-hint">No signature — the PDF will be left unsigned</span>
@@ -97,14 +93,6 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
                       hidden
                     />
                   </label>
-                  {canUseBuiltin && draft.signature !== "builtin" && (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setDraft((d) => ({ ...d, signature: "builtin" }))}
-                    >
-                      Use original
-                    </button>
-                  )}
                   {draft.signature && (
                     <button
                       className="btn btn-secondary btn-sm"
@@ -139,7 +127,7 @@ function SellerModal({ initial, isNew, onSave, onClose }) {
 export default function SellerPanel({ sellers, selectedId, onSelect, onSave, onDelete }) {
   const [modal, setModal] = useState(null); // { seller, isNew }
   const seller = sellers.find((s) => s.id === selectedId) || sellers[0];
-  const isDefault = seller.id === SELLER_CONFIG.id;
+  const isDefault = isBuiltinSeller(seller.id);
 
   const handleDelete = () => {
     if (window.confirm(`Delete seller "${seller.name}"?`)) onDelete(seller.id);
@@ -215,7 +203,7 @@ export default function SellerPanel({ sellers, selectedId, onSelect, onSave, onD
         </div>
         <div>
           <span className="seller-label">Signature</span>
-          <span className="seller-value">{seller.signature ? "✓ On file" : "None"}</span>
+          <span className="seller-value">{seller.signature?.startsWith("data:image/") ? "✓ On file" : "None"}</span>
         </div>
       </div>
 

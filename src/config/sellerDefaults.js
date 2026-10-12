@@ -1,18 +1,37 @@
-// Default seller — always available, cannot be deleted.
-// signature: "builtin" → uses the embedded Bikramjeet signature in pdfGenerator.js
-export const SELLER_CONFIG = {
-  id: "dreamfleet-default",
-  mvdaRegNumber: "4963427",
-  name: "Dreamfleet Inc.",
-  address: "108 Cannifton Road North",
-  cityProvPC: "Cannifton, ON K0K 1K0",
-  telephone: "6139617477",
-  fax: "",
-  salespersonRegistration: "5712963",
-  salespersonName: "Bikramjeet Bhagtana",
-  hstRegistration: "829092873RT0001",
-  signature: "builtin",
-};
+// Built-in sellers — always available in the seller dropdown, cannot be deleted.
+// The first one is selected by default.
+export const BUILTIN_SELLERS = [
+  {
+    id: "16496351-canada-inc",
+    mvdaRegNumber: "5873807",
+    name: "16496351 Canada Inc.",
+    address: "3725 Lake Shore Blvd W",
+    cityProvPC: "Etobicoke, Ontario, M8W 1P9",
+    telephone: "647-608-4135",
+    fax: "",
+    salespersonRegistration: "5770995",
+    salespersonName: "DEEPIT SAJAN OOMMEN",
+    hstRegistration: "700404957RT0001",
+    signature: "",
+  },
+  {
+    id: "asyed-auto-sales",
+    mvdaRegNumber: "5866991",
+    name: "ASYED AUTO SALES LTD",
+    address: "109–2829 DERRY RD E",
+    cityProvPC: "Mississauga, Ontario, L4T 1A5",
+    telephone: "647-762-6291",
+    fax: "",
+    salespersonRegistration: "5920756",
+    salespersonName: "RAJDEVINDER SINGH VAROWAL",
+    hstRegistration: "752404822RT0001",
+    signature: "",
+  },
+];
+
+export const DEFAULT_SELLER_ID = BUILTIN_SELLERS[0].id;
+
+export const isBuiltinSeller = (id) => BUILTIN_SELLERS.some((s) => s.id === id);
 
 export const EMPTY_SELLER = {
   id: "",
@@ -25,7 +44,7 @@ export const EMPTY_SELLER = {
   salespersonRegistration: "",
   salespersonName: "",
   hstRegistration: "",
-  signature: "", // "" = none, "builtin", or a data:image/png|jpeg URL
+  signature: "", // "" = none, or a data:image/png|jpeg URL
 };
 
 export const HST_RATE = 0.13;

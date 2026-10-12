@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import BillForm from "./components/BillForm";
-import { SELLER_CONFIG } from "./config/sellerDefaults";
+import { DEFAULT_SELLER_ID, isBuiltinSeller } from "./config/sellerDefaults";
 import {
   loadSellers,
   saveSellers,
@@ -30,13 +30,13 @@ function App() {
   };
 
   const handleDelete = (id) => {
-    if (id === SELLER_CONFIG.id) return;
+    if (isBuiltinSeller(id)) return;
     setSellers((prev) => {
       const next = prev.filter((s) => s.id !== id);
       saveSellers(next);
       return next;
     });
-    setSelectedId(SELLER_CONFIG.id);
+    setSelectedId(DEFAULT_SELLER_ID);
   };
 
   return (
