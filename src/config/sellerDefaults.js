@@ -1,3 +1,51 @@
+// Built-in sellers — available on every device.
+// signature: path to a PNG in /public, or a data: URL (uploaded via Edit), or "" for none.
+export const BUILTIN_SELLERS = [
+  {
+    id: "seller-16496351-canada",
+    mvdaRegNumber: "5873807",
+    name: "16496351 Canada Inc.",
+    address: "3725 Lake Shore Blvd W",
+    cityProvPC: "Etobicoke, Ontario, M8W 1P9",
+    telephone: "647-608-4135",
+    fax: "",
+    salespersonRegistration: "5770995",
+    salespersonName: "DEEPIT SAJAN OOMMEN",
+    hstRegistration: "700404957RT0001",
+    signature: "/signatures/deepit-sajan-oommen.png",
+  },
+  {
+    id: "seller-asyed-auto-sales",
+    mvdaRegNumber: "5866991",
+    name: "ASYED AUTO SALES LTD",
+    address: "109-2829 DERRY RD E",
+    cityProvPC: "Mississauga, Ontario, L4T 1A5",
+    telephone: "647-762-6291",
+    fax: "",
+    salespersonRegistration: "5920756",
+    salespersonName: "RAJDEVINDER SINGH VAROWAL",
+    hstRegistration: "752404822RT0001",
+    signature: "/signatures/rajdevinder-singh-varowal.png",
+  },
+  {
+    id: "seller-msr-motors",
+    mvdaRegNumber: "5911805",
+    name: "MSR MOTORS INC",
+    address: "SUITE 1600-2300 YONGE ST",
+    cityProvPC: "TORONTO ON M4P 1E4",
+    telephone: "",
+    fax: "",
+    salespersonRegistration: "5911797",
+    salespersonName: "RAHUL MEHTA",
+    hstRegistration: "785706631",
+    signature: "/signatures/rahul-mehta.png",
+  },
+];
+
+export const DEFAULT_SELLER = BUILTIN_SELLERS[0];
+
+export const isBuiltinSeller = (id) => BUILTIN_SELLERS.some((s) => s.id === id);
+
 export const EMPTY_SELLER = {
   id: "",
   mvdaRegNumber: "",
